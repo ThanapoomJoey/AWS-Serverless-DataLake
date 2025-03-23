@@ -1,0 +1,4 @@
+create database supermarket_landing_zone;
+create database supermarket_raw_zone;
+create database supermarket_serving_zone;
+create database supermarket_temp_zone;

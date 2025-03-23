@@ -1,0 +1,11 @@
+branch_id,branch_name,location_id,open_date,manager_name
+BR001,Bangkok Branch,LOC001,2023-05-18,Melissa Clarke
+BR002,Chiang Mai Branch,LOC002,2024-12-17,Victoria Weber
+BR003,Khon Kaen Branch,LOC003,2023-03-25,Jacob Taylor
+BR004,Phuket Branch,LOC004,2024-10-05,Alfred Sparks
+BR005,Nakhon Pathom Branch,LOC005,2023-10-17,Steven Perry
+BR006,Pattaya Branch,LOC006,2023-10-04,Matthew Adams
+BR007,Hat Yai Branch,LOC007,2024-10-22,Jose Hayes
+BR008,Udon Thani Branch,LOC008,2023-06-09,Paige Nguyen
+BR009,Rayong Branch,LOC009,2023-01-20,Keith Hale
+BR010,Surat Thani Branch,LOC010,2024-06-08,Sara Brown

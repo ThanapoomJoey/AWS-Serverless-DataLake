@@ -1,0 +1,11 @@
+location_id,city,region
+LOC001,Bangkok,Central
+LOC002,Chiang Mai,North
+LOC003,Khon Kaen,Northeast
+LOC004,Phuket,South
+LOC005,Nakhon Pathom,Central
+LOC006,Pattaya,East
+LOC007,Hat Yai,South
+LOC008,Udon Thani,Northeast
+LOC009,Rayong,East
+LOC010,Surat Thani,South
