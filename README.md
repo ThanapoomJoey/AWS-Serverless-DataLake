@@ -42,17 +42,21 @@ Key AWS services power this datalake, optimizing costs and performance with Parq
 ![Csv_to_parquet](2_S3_csv_to_parquet/S3_image/1_csv_to_parquet.png)
 - Using a Glue job with Python script [S3_csv_to_parquet.py](2_S3_csv_to_parquet/S3_csv_to_parquet_try_error_continue.py)
 - Glue Python Shell setup instructions: [Glue_Python_Shell_Setup.md](2_S3_csv_to_parquet/Glue_Python_Shell_Setup.md)  
-- **Note**: While Glue Crawler can work directly with CSV files without converting to Parquet, experience shows that Crawler may generate incorrect DDL schemas or column names for some tables. This happens because CSV files do not store schema or data type information. In contrast, Parquet files include schema and data type details, allowing Crawler to process them more accurately.
+- **Note**: While Glue Crawler can work directly with CSV files without converting to Parquet, experience shows that Crawler may generate incorrect DDL schemas or column names for some tables. This happens because CSV files do not store schema or data type information. In contrast, Parquet files include schema and data type details, allowing Crawler to process them more accurately
 ![Crawler_csv_fail](2_S3_csv_to_parquet/S3_image/3_crawler_csv_fail.png)
 
 ### Step 3: Create Athena Database
-- Create databases in Athena to store tables for different zones.  
+- Create databases in Athena to store tables for different zones 
 - **Setting Athena**:  
-  - Go to **Manage Settings** in Athena.  
+  - Go to **Manage Settings** in Athena
   - Set the S3 path for storing query results: `s3://serverless-datalake-project-supermarket/`   
   ![Athena Manage Settings](3_Create_Athena_database/Athena_setup_images/9_athena_Manage_settings.png) 
 - Run the SQL query from [Create_database.sql](3_Create_Athena_database/Create_database.sql)
-![Create_database.sql](3_Create_Athena_database/Create_database.sql)
+  ```sql
+  create database supermarket_landing_zone;
+  create database supermarket_raw_zone;
+  create database supermarket_serving_zone;
+  create database supermarket_temp_zone;
 
 ### Step 4: Generate DDL and Tables with Glue Crawler
 - Use Glue Crawler to scan `landing_zone/parquet_supermarket` and auto-create DDL and tables in the Athena database 
@@ -66,7 +70,23 @@ Key AWS services power this datalake, optimizing costs and performance with Parq
 ### Step 5: Create Tables in Raw Zone
 - Manually create tables in `raw_zone` for the initial setup (one-time task) using SQL queries like [CREATE_raw_supermarket_sales.sql](4_Create_table_raw_zone/CREATE_raw_supermarket_sales.sql) for all tables
 - **Example**: Create the `supermarket_sales` table with partitions:
-![CREATE_raw_supermarket_sales.sql](4_Create_table_raw_zone/CREATE_raw_supermarket_sales.sql)
+  ```sql
+  CREATE EXTERNAL TABLE `supermarket_raw_zone.supermarket_sales`(
+    `sale_id` string, 
+    `customer_id` string, 
+    `product_id` string, 
+    `branch_id` string, 
+    `sale_date` string, 
+    `quantity` int, 
+    `unit_price` double, 
+    `total_amount` double)
+  PARTITIONED BY ( 
+    `year` string, 
+    `month` string, 
+    `day` string)
+  STORED AS PARQUET
+  LOCATION
+    's3://serverless-datalake-project-supermarket/raw_zone/supermarket_sales';
 - Avoid running Glue Crawler multiple times to save costs  
 - **Optional**: For large projects, automate SQL generation using the Python script 
 [gen_sql_file_create_table_raw_zone](4_Create_table_raw_zone/gen_sql_file_with_try_error.py) , which generates SQL based on the DDL from `landing_zone`
@@ -79,15 +99,38 @@ Key AWS services power this datalake, optimizing costs and performance with Parq
   - For static tables (e.g., `supermarket_branches`, `supermarket_categories`, `supermarket_customers`, `supermarket_locations`, `supermarket_products`), no partitioning is needed as they are not updated daily  
   - For `supermarket_sales`, include partitioning by `year`, `month`, and `day` as it receives daily updates
 - **Example for `supermarket_sales`**:  
-  - **Create Temp Table with CTAS**:
-  ![CTAS_supermarket_raw_sales.sql](4_Create_table_raw_zone/CTAS_supermarket_raw_sales.sql)
+- **Create Temp Table with CTAS**:
+    ```sql
+    CREATE TABLE supermarket_temp_zone.supermarket_sales
+    WITH (
+      format = 'PARQUET',
+      parquet_compression = 'SNAPPY',
+      external_location = 's3://serverless-datalake-project-supermarket/raw_zone/supermarket_sales/2025/202503/20250318'
+    )
+    AS
+    SELECT
+      sale_id,
+      customer_id,
+      product_id,
+      branch_id,
+      sale_date,
+      quantity,
+      unit_price,
+      total_amount,
+      '2025' AS year,
+      '202503' AS month,
+      '20250318' AS day
+    FROM
+      supermarket_landing_zone.supermarket_sales;
 
-  - **Add Partition to Raw Zone Table**:
-  ![ALTER_TABLE_add_partition_sales.sql](4_Create_table_raw_zone/ALTER_TABLE_add_partition_sales.sql)
-
-
-  - **Drop Temp Table**:
-  ![DROP_TABLE_raw_supermarket_sales.sql](4_Create_table_raw_zone/DROP_TABLE_raw_supermarket_sales.sql)
+- **Add Partition to Raw Zone Table**:
+    ```sql
+    ALTER TABLE supermarket_raw_zone.supermarket_sales
+    ADD PARTITION (year='2025', month='202503', day='20250318')
+    LOCATION 's3://serverless-datalake-project-supermarket/raw_zone/supermarket_sales/2025/202503/20250318/';
+- **Drop Temp Table**:
+    ```sql
+    DROP TABLE supermarket_temp_zone.supermarket_sales;
 
 - Results from running the CTAS query will generate Parquet files in the `raw_zone` of S3, along with the specified partitions
 ![CTAS_raw_zone](4_Create_table_raw_zone/raw_zone_images/1_CTAS_raw_zone.png)
@@ -102,7 +145,26 @@ Key AWS services power this datalake, optimizing costs and performance with Parq
   - [CREATE_VIEW_dim_customers.sql](5_Create_view_fact_and_dimention/CREATE_VIEW_dim_customers.sql)  
   - [CREATE_VIEW_fact_sales.sql](5_Create_view_fact_and_dimention/CREATE_VIEW_fact_sales.sql)  
 - **Example for `vw_fact_sales`**:
-![CREATE_VIEW_fact_sales.sql](5_Create_view_fact_and_dimention/CREATE_VIEW_fact_sales.sql)
+  ```sql
+  CREATE VIEW supermarket_serving_zone.vw_fact_sales AS
+  SELECT
+    s.sale_id,
+    s.customer_id,
+    s.product_id,
+    s.branch_id,
+    s.sale_date,
+    s.quantity,
+    p.unit_price,
+    s.total_amount,
+    p.unit_cost,
+    ROUND((p.unit_price - p.unit_cost) * s.quantity,2) AS profit,
+    CASE 
+        WHEN s.unit_price = 0 THEN 0
+        ELSE ROUND(((p.unit_price - p.unit_cost) / p.unit_price) * 100, 2)
+    END AS "margin(%)"
+  FROM supermarket_raw_zone.supermarket_sales s
+  LEFT JOIN supermarket_raw_zone.supermarket_products p 
+    ON s.product_id = p.product_id;
 
 - **Note**: The fact table `vw_fact_sales` joins with `supermarket_products` to calculate metrics like profit and margin for analysis.
 
@@ -112,17 +174,130 @@ Key AWS services power this datalake, optimizing costs and performance with Parq
 ### Step 8: Daily Update for Landing Zone
 - Assume new `supermarket_sales` CSV files are uploaded daily to `landing_zone` 
 - Convert to Parquet using Glue job with [s3_csv_to_parquet_supermarket_sales.py](6_daily_update_landing_zone/s3_csv_to_parquet_supermarket_sales.py)
-![s3_csv_to_parquet_supermarket_sales.py](6_daily_update_landing_zone/s3_csv_to_parquet_supermarket_sales.py)
+  ```python
+  import pandas as pd
+  import boto3
+  from datetime import datetime
+
+  s3 = boto3.client('s3')
+
+  bucket = 'serverless-datalake-project-supermarket'
+  day = datetime.today().strftime("%Y%m%d")
+  filename = f'supermarket_sales_{day}'
+
+  def writeparquet():
+      try:
+          csv_key = f'landing_zone/csv_supermarket/supermarket_sales/{day}/{filename}.csv'
+          s3.download_file(bucket, csv_key, 'temp.csv')
+          df = pd.read_csv('temp.csv')
+          df.to_parquet(f'{filename}.parquet')
+
+          parquet_key = f'landing_zone/parquet_supermarket/supermarket_sales/{day}/{filename}.parquet'
+          s3.upload_file(f'{filename}.parquet', bucket, parquet_key)
+          print(f"write parquet file {filename} : succeed")
+      except Exception as e:
+          raise Exception(f"Error to write {filename}.parquet : {str(e)}")
+  writeparquet()
 
 - Update Athena to see new files using [daily_landing_supermarket_sales.sql](6_daily_update_landing_zone/daily_landing_supermarket_sales.sql)
-![daily_landing_supermarket_sales.sql](6_daily_update_landing_zone/daily_landing_supermarket_sales.sql)
+  ```sql
+  ALTER TABLE supermarket_landing_zone.supermarket_sales
+  SET LOCATION 's3://serverless-datalake-project-supermarket/landing_zone/parquet_supermarket/supermarket_sales/20250319'
 
 - or automate with [daily_landing_supermarket_sales.py](6_daily_update_landing_zone/daily_landing_supermarket_sales.py)
-![daily_landing_supermarket_sales.py](6_daily_update_landing_zone/daily_landing_supermarket_sales.py)
+  ```python
+  import boto3
+  from datetime import datetime
+
+  athena_client = boto3.client('athena', region_name='ap-southeast-1')
+
+  #day = '20250319'
+  day = datetime.today().strftime("%Y%m%d")
+  database = 'supermarket_landing_zone'
+  query = f"""
+        alter table supermarket_sales
+        set location 's3://serverless-datalake-project-supermarket/landing_zone/parquet_supermarket/supermarket_sales/{day}'
+        """
+
+  response = athena_client.start_query_execution(
+      QueryString=query,
+      QueryExecutionContext={
+          'Database': database
+      },
+      ResultConfiguration={
+          'OutputLocation': 's3://serverless-datalake-project-supermarket/glue'
+      }
+  )
 
 ### Step 9: Daily Update for Raw Zone
 - Update `raw_zone` using Glue job with [daily_raw_supermarket_sales.py](7_daily_update_raw_zone/daily_raw_supermarket_sales.py) to automate queries
-![daily_raw_supermarket_sales.py](7_daily_update_raw_zone/daily_raw_supermarket_sales.py)
+  ```python
+  import boto3
+  import time
+  from datetime import datetime
+
+  athena_client = boto3.client('athena', region_name='ap-southeast-1')
+
+  year = '2025'
+  month = '202503'
+  day = datetime.today().strftime("%Y%m%d")
+  database = 'supermarket_raw_zone'
+  query_string = """
+          CREATE TABLE supermarket_temp_zone.supermarket_sales_{2}
+          WITH (
+            format = 'PARQUET',
+            parquet_compression = 'SNAPPY',
+            external_location = 's3://serverless-datalake-project-supermarket/raw_zone/supermarket_sales/{0}/{1}/{2}'
+          )
+          AS
+          SELECT
+              sale_id,
+              customer_id,
+              product_id,
+              branch_id,
+              sale_date,
+              quantity,
+              unit_price,
+              total_amount,
+          '{0}' AS year,
+          '{1}' AS month,
+          '{2}' AS day
+          FROM
+              supermarket_landing_zone.supermarket_sales;
+          ALTER TABLE supermarket_raw_zone.supermarket_sales
+          ADD PARTITION (year='{0}', month='{1}', day='{2}')
+          LOCATION 's3://serverless-datalake-project-supermarket/raw_zone/supermarket_sales/{0}/{1}/{2}/';
+          DROP TABLE supermarket_temp_zone.supermarket_sales_{2}
+          """.format(year,month,day)
+
+
+  query_list = query_string.split(";")
+  for query in query_list:
+      response = athena_client.start_query_execution(
+          QueryString=query,
+          QueryExecutionContext={
+              'Database': database
+          },
+          ResultConfiguration={
+              'OutputLocation': 's3://serverless-datalake-project-supermarket/glue'
+          }
+          )
+      query_execution_id = response['QueryExecutionId']
+      status = None
+      while status not in ['SUCCEEDED', 'FAILED', 'CANCELLED']:
+          response2 = athena_client.get_query_execution(
+              QueryExecutionId=query_execution_id
+          )
+          status = response2['QueryExecution']['Status']['State']
+          if status == 'SUCCEEDED':
+              print("Query execution completed successfully.")
+              break
+          elif status in ['FAILED', 'CANCELLED']:
+              print("Query execution failed or was cancelled.")
+              break
+          time.sleep(5)
+
+      print("Query Execution ID:", query_execution_id)
 
 ### Automation: Step 8 + Step 9
 - Use **Step Functions** to automate the workflow:  
