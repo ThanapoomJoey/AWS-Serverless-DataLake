@@ -36,7 +36,7 @@ query_string = """
         DROP TABLE supermarket_temp_zone.supermarket_sales_{2}
         """.format(year,month,day)
 
-# Submit the query
+
 query_list = query_string.split(";")
 for query in query_list:
     response = athena_client.start_query_execution(

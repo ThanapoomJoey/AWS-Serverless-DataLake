@@ -1,0 +1,1 @@
+DROP TABLE supermarket_temp_zone.supermarket_sales;

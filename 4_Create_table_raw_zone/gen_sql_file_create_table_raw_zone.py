@@ -18,4 +18,4 @@ for table in tablenames:
     output_path = f"/Users/thanapoomtongplengsri/Desktop/gen_sql_file/{output_file}"
     with open(output_path,'w') as file:
             file.write(query)
-    print(f"สร้างไฟล์ {output_file} เสร็จแล้ว")
+    print(f"Create {output_file} success")
