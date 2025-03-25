@@ -141,8 +141,8 @@ Key AWS services power this datalake, optimizing costs and performance with Parq
 ![Starschema](9_Summary/Starschema.png)
 - Files:  
   - [CREATE_VIEW_dim_branches.sql](5_Create_view_fact_and_dimention/CREATE_VIEW_dim_branches.sql)  
-  - [CREATE_VIEW_dim_categories.sql](5_Create_view_fact_and_dimention/CREATE_VIEW_dim_categories.sql)  
   - [CREATE_VIEW_dim_customers.sql](5_Create_view_fact_and_dimention/CREATE_VIEW_dim_customers.sql)  
+  - [CREATE_VIEW_dim_products](5_Create_view_fact_and_dimention/CREATE_VIEW_dim_products.sql)
   - [CREATE_VIEW_fact_sales.sql](5_Create_view_fact_and_dimention/CREATE_VIEW_fact_sales.sql)  
 - **Example for `vw_fact_sales`**:
   ```sql
