@@ -33,7 +33,7 @@ Key AWS services power this datalake, optimizing costs and performance with Parq
 ## Steps
 
 ### Step 1: Import Data to S3
-- Set up the S3 bucket and prepare data.
+- Set up the S3 bucket and prepare data
 ![S3_csv_landing_zone](2_S3_csv_to_parquet/S3_image/2_S3_csv_landing_zone.png)
 - See details in [S3_Bucket_Setup_for_Serverless_Datalake.md](1_import_data_to_S3/S3_Bucket_Setup_for_Serverless_Datalake.md)
 
@@ -94,7 +94,7 @@ Key AWS services power this datalake, optimizing costs and performance with Parq
 
 ### Step 6: CTAS to Write Files to S3
 - Use a CTAS (Create Table As Select) query from [CTAS_supermarket_raw_sales.sql](4_Create_table_raw_zone/CTAS_supermarket_raw_sales.sql) to create a temporary table, write Parquet files to `raw_zone`, and add partitions using data from `landing_zone`  
-- Drop the temporary table after completion to prepare for the next run.
+- Drop the temporary table after completion to prepare for the next run
 - **Process for All Tables**: Apply the following steps to each table:
   - For static tables (e.g., `supermarket_branches`, `supermarket_categories`, `supermarket_customers`, `supermarket_locations`, `supermarket_products`), no partitioning is needed as they are not updated daily  
   - For `supermarket_sales`, include partitioning by `year`, `month`, and `day` as it receives daily updates
@@ -166,7 +166,7 @@ Key AWS services power this datalake, optimizing costs and performance with Parq
   LEFT JOIN supermarket_raw_zone.supermarket_products p 
     ON s.product_id = p.product_id;
 
-- **Note**: The fact table `vw_fact_sales` joins with `supermarket_products` to calculate metrics like profit and margin for analysis.
+- **Note**: The fact table `vw_fact_sales` joins with `supermarket_products` to calculate metrics like profit and margin for analysis
 
 - Test the star schema by querying the top 5 customers with the highest total purchase amounts on March 23, 2025, using the fact and dimension tables in the `serving_zone`
 ![query_serving_zone](5_Create_view_fact_and_dimention/serving_zone_images/1_query_serving_zone.png)
@@ -310,7 +310,7 @@ Key AWS services power this datalake, optimizing costs and performance with Parq
 ![Step_function_succeed](8_automate_pipeline_daily/2_step_function_succeed.png)
 - Schedule with **Amazon EventBridge Scheduler** (e.g., daily at 7 AM)
 ![Amazon_EventBridge](8_automate_pipeline_daily/3_Amazon_EventBridge.png)
-- Monitor logs with **CloudWatch**.
+- Monitor logs with **CloudWatch**
 ![cloud_watch_log](8_automate_pipeline_daily/4_cloud_watch_log.png)
 
 ### Data Visualization
@@ -327,7 +327,7 @@ Key AWS services power this datalake, optimizing costs and performance with Parq
 
 ## Summary: Benefits of Parquet Conversion and Partitioning
 
-This summary highlights three key outcomes from the serverless datalake project, based on file conversion and query performance in Athena.
+This summary highlights three key outcomes from the serverless datalake project, based on file conversion and query performance in Athena
 
 ### 1. File Conversion: CSV to Parquet
 - **CSV Size**: 636.7 MB
@@ -368,6 +368,6 @@ This summary highlights three key outcomes from the serverless datalake project,
 - **Conclusion**: Partitioning cuts run time by **86.64%** (from 7.777 s to 1.039 s), driven by the drastic reduction in data scanned, despite similar queue times
 
 ### Final Takeaway
-- Converting to Parquet saves **85.66%** of storage.
+- Converting to Parquet saves **85.66%** of storage
 - Partitioning slashes data scanned by **99.3%** and run time by **86.64%**, proving its value for cost-efficiency and performance in this datalake
 - These optimizations enable scalable, cost-effective querying as data grows
